@@ -1,27 +1,86 @@
 <!doctype html>
 <html>
-<head><meta charset="utf-8"><title>Order form</title></head>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Place an order — Eco Form</title>
+  <style>
+    /* simple clean styles like your example site */
+    body { font-family: Arial, sans-serif; background:#f3f4f6; margin:0; padding:40px; display:flex; justify-content:center; }
+    .card { width:100%; max-width:420px; background:#fff; border-radius:14px; box-shadow:0 6px 18px rgba(0,0,0,0.08); padding:24px; }
+    h1 { margin:0 0 12px; font-size:20px; }
+    label { display:block; margin-bottom:10px; font-size:13px; color:#333; }
+    input, textarea, select { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #e5e7eb; box-sizing:border-box; margin-top:6px; }
+    button { background:#0f172a; color:#fff; border:0; padding:10px 16px; border-radius:10px; font-weight:600; cursor:pointer; margin-top:8px; }
+    .small { font-size:12px; color:#6b7280; margin-top:8px; }
+    .row { display:flex; gap:10px; }
+    .half { flex:1; }
+  </style>
+</head>
 <body>
-  <form id="myForm">
-    <div><label>Name<br><input name="name" required></label></div>
-    <div><label>Phone<br><input name="phone" required></label></div>
-    <div><label>Size/Details<br><input name="size"></label></div>
-    <div><label>Message<br><textarea name="message"></textarea></label></div>
-    <div><button type="submit">Send</button></div>
-  </form>
+  <div class="card">
+    <h1>Place an order</h1>
+    <form id="orderForm">
+      <label>
+        Name
+        <input name="name" required />
+      </label>
+
+      <label>
+        Phone
+        <input name="phone" required placeholder="+2547..." />
+      </label>
+
+      <div class="row">
+        <label class="half">
+          Size
+          <input name="size" placeholder="e.g. M / 32 chest" />
+        </label>
+        <label class="half">
+          Quantity
+          <input name="qty" type="number" min="1" value="1" />
+        </label>
+      </div>
+
+      <label>
+        Message / Details
+        <textarea name="message" rows="3" placeholder="Any special request"></textarea>
+      </label>
+
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <button type="submit">Send Order</button>
+        <div id="status" class="small"></div>
+      </div>
+      <div class="small" style="margin-top:10px;">
+        This form will send submissions to your Telegram via Netlify functions.
+      </div>
+    </form>
+  </div>
 
   <script>
-    const form = document.getElementById('myForm');
-    form.addEventListener('submit', async e => {
+    const form = document.getElementById('orderForm');
+    const status = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      status.textContent = 'Sending...';
       const data = Object.fromEntries(new FormData(form));
-      const res = await fetch('/.netlify/functions/sendTelegram', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-      });
-      if (res.ok) alert('Sent!');
-      else alert('Error sending');
+      try {
+        const res = await fetch('/.netlify/functions/sendTelegram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          status.textContent = 'Error: ' + text;
+        } else {
+          status.textContent = 'Sent ✓';
+          form.reset();
+        }
+      } catch (err) {
+        status.textContent = 'Network error';
+      }
     });
   </script>
 </body>
