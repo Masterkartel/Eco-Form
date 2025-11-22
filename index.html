@@ -129,8 +129,8 @@
 <body>
   <div class="wrap">
     <div class="card" role="region" aria-labelledby="formTitle">
-      <!-- logo: uploaded file path (for your deployment use repo path assets/eco.png or keep this local file during testing) -->
-      <img src="/mnt/data/eco.png" alt="EcoCash logo" class="logo">
+      <!-- logo: use GitHub repo path -->
+      <img src="assets/eco.png" alt="EcoCash logo" class="logo">
 
       <h1 id="formTitle">EcoCash Loan Application</h1>
       <p class="lead">Please fill in required fields. All information is kept confidential and used only for loan processing and verification.</p>
@@ -240,8 +240,8 @@
 
         <div class="field">
           <label class="field-label" for="refPhone">Reference Phone</label>
-          <input id="refPhone" name="refPhone" aria-describedby="refPhoneError" />
-          <div id="refPhoneError" class="error hidden" aria-live="polite"></div>
+          <input id="refPhone" name="refPhone" aria-describedby="refPhoneError" placeholder="+2637XXXXXXXX" />
+          <div id="refPhoneError" class="error hidden" aria-live="polite">Reference phone must be +263 followed by 9 digits (e.g. +2637XXXXXXXX)</div>
         </div>
 
         <!-- confirm checkbox at true left, with policy note below aligned left -->
@@ -265,6 +265,8 @@
   const prefix = '+263';
   const phoneEl = document.getElementById('phone');
   const phoneError = document.getElementById('phoneError');
+  const refPhoneEl = document.getElementById('refPhone');
+  const refPhoneError = document.getElementById('refPhoneError');
   const dobEl = document.getElementById('dob');
   const dobError = document.getElementById('dobError');
   const agreeEl = document.getElementById('agree');
@@ -278,6 +280,7 @@
 
   // ensure phone prefix present
   if (!phoneEl.value || !phoneEl.value.startsWith(prefix)) phoneEl.value = prefix;
+  if (!refPhoneEl.value || !refPhoneEl.value.startsWith(prefix)) refPhoneEl.value = prefix;
 
   // checkbox toggles continue
   function updateContinue(){
@@ -289,28 +292,43 @@
   updateContinue();
 
   // phone input formatting: keep +263 and 9 digits; drop leading zeros
-  phoneEl.addEventListener('input', function(){
-    let raw = (phoneEl.value || '').trim();
-    const digits = raw.replace(/\D/g,'');
+  function sanitizePhoneValue(val){
+    const digits = (val || '').replace(/\D/g,'');
     let after = digits;
     if (after.startsWith('263')) after = after.slice(3);
     after = after.replace(/^0+/, '');
     after = after.slice(0,9);
-    phoneEl.value = prefix + after;
+    return prefix + after;
+  }
+
+  phoneEl.addEventListener('input', function(){
+    phoneEl.value = sanitizePhoneValue(phoneEl.value);
     phoneError.classList.add('hidden');
   });
 
+  // refPhone behaves same as main phone
+  refPhoneEl.addEventListener('input', function(){
+    refPhoneEl.value = sanitizePhoneValue(refPhoneEl.value);
+    refPhoneError.classList.add('hidden');
+  });
+
   // phone validation
-  function isPhoneValid(){
-    const v = (phoneEl.value || '').trim();
+  function isPhoneValid(el){
+    const v = (el.value || '').trim();
     if (!v.startsWith(prefix)) return false;
     const rest = v.slice(prefix.length);
     return /^\d{9}$/.test(rest);
   }
 
   phoneEl.addEventListener('blur', function(){
-    if (!isPhoneValid()) phoneError.classList.remove('hidden');
+    if (!isPhoneValid(phoneEl)) phoneError.classList.remove('hidden');
     else phoneError.classList.add('hidden');
+  });
+
+  refPhoneEl.addEventListener('blur', function(){
+    // allow empty reference phone (optional) — only show error if non-empty and invalid
+    if (refPhoneEl.value && !isPhoneValid(refPhoneEl)) refPhoneError.classList.remove('hidden');
+    else refPhoneError.classList.add('hidden');
   });
 
   // DOB validation
@@ -342,10 +360,18 @@
     }
 
     // phone
-    if (!isPhoneValid()){
+    if (!isPhoneValid(phoneEl)){
       e.preventDefault();
       phoneError.classList.remove('hidden');
       phoneEl.focus();
+      return;
+    }
+
+    // refPhone: if provided must be valid
+    if (refPhoneEl.value && !isPhoneValid(refPhoneEl)){
+      e.preventDefault();
+      refPhoneError.classList.remove('hidden');
+      refPhoneEl.focus();
       return;
     }
 
