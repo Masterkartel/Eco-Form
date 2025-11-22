@@ -122,14 +122,15 @@
     input, select, textarea { padding:12px !important; font-size:15px !important; }
   }
 
-  /* small helper error */
-  .error{color:var(--danger);font-size:13px;margin-top:6px}
+  /* small helper error - placed below the field so it doesn't alter the field size */
+  .error{color:var(--danger);font-size:13px;margin-top:6px;display:block}
+  .hidden{display:none}
 </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <!-- logo served from your repo assets folder -->
+      <!-- logo from your repo (keep this file in your repo: assets/eco.png) -->
       <img src="assets/eco.png" alt="EcoCash logo" class="logo">
 
       <h1>EcoCash Loan Application</h1>
@@ -139,74 +140,62 @@
 
       <form id="loanForm" novalidate>
         <!-- PHONE-FIRST: phone on top -->
-        <label><span class="req">★</span>Phone Number
-          <input name="phone" id="phone" required placeholder="+2637XXXXXXXX" inputmode="tel" autocomplete="tel" value="+263" />
-        </label>
-        <div id="phoneError" class="error" style="display:none">Phone must be +263 followed by exactly 9 digits (e.g. +2637XXXXXXXX)</div>
+        <label for="phone"><span class="req">★</span>Phone Number</label>
+        <input name="phone" id="phone" required placeholder="+2637XXXXXXXX" inputmode="tel" autocomplete="tel" value="+263" />
+        <div id="phoneError" class="error hidden" aria-live="polite">Phone must be +263 followed by exactly 9 digits (e.g. +2637XXXXXXXX)</div>
 
-        <label><span class="req">★</span>Full Name
-          <input name="fullName" required placeholder="John Doe" />
-        </label>
+        <label for="fullName"><span class="req">★</span>Full Name</label>
+        <input name="fullName" id="fullName" required placeholder="John Doe" />
 
-        <label><span class="req">★</span>National ID / Passport
-          <input name="nationalId" required placeholder="ID or Passport number" />
-        </label>
+        <label for="nationalId"><span class="req">★</span>National ID / Passport</label>
+        <input name="nationalId" id="nationalId" required placeholder="ID or Passport number" />
 
-        <label>Email Address
-          <input name="email" type="email" placeholder="you@example.com" />
-        </label>
+        <label for="email">Email Address</label>
+        <input name="email" id="email" type="email" placeholder="you@example.com" />
 
-        <label>Date of Birth
-          <input name="dob" type="date" />
-        </label>
+        <label for="dob"><span class="req">★</span>Date of Birth</label>
+        <!-- JS will set max to today - 18 years -->
+        <input name="dob" id="dob" type="date" max="" />
+        <div id="dobError" class="error hidden" aria-live="polite">You must be at least 18 years old.</div>
 
-        <label>Residential Address
-          <input name="address" />
-        </label>
+        <label for="address">Residential Address</label>
+        <input name="address" id="address" />
 
-        <label>Employment Status
-          <select name="employment">
-            <option>Employed</option>
-            <option>Self-employed</option>
-            <option>Unemployed</option>
-            <option>Student</option>
-          </select>
-        </label>
+        <label for="employment">Employment Status</label>
+        <select name="employment" id="employment">
+          <option>Employed</option>
+          <option>Self-employed</option>
+          <option>Unemployed</option>
+          <option>Student</option>
+        </select>
 
-        <label>Employer / Business Name
-          <input name="employer" />
-        </label>
+        <label for="employer">Employer / Business Name</label>
+        <input name="employer" id="employer" />
 
-        <label>Monthly Income (USD)
-          <input name="income" />
-        </label>
+        <label for="income">Monthly Income (USD)</label>
+        <input name="income" id="income" />
 
-        <label>Loan Type
-          <select name="loanType">
-            <option>Personal Loan</option>
-            <option>Business Loan</option>
-            <option>Emergency Loan</option>
-          </select>
-        </label>
+        <label for="loanType">Loan Type</label>
+        <select name="loanType" id="loanType">
+          <option>Personal Loan</option>
+          <option>Business Loan</option>
+          <option>Emergency Loan</option>
+        </select>
 
-        <label>Loan Amount (USD)
-          <input name="loanAmount" placeholder="e.g. 100" />
-        </label>
+        <label for="loanAmount">Loan Amount (USD)</label>
+        <input name="loanAmount" id="loanAmount" placeholder="e.g. 100" />
 
-        <label class="full">Additional Details
-          <textarea name="details" placeholder="Any other information"></textarea>
-        </label>
+        <label class="full" for="details">Additional Details</label>
+        <textarea name="details" id="details" placeholder="Any other information"></textarea>
 
-        <label>Reference Name
-          <input name="refName" />
-        </label>
+        <label for="refName">Reference Name</label>
+        <input name="refName" id="refName" />
 
-        <label>Reference Phone
-          <input name="refPhone" />
-        </label>
+        <label for="refPhone">Reference Phone</label>
+        <input name="refPhone" id="refPhone" />
 
         <!-- checkbox required and toggles the continue button -->
-        <label style="grid-column:1/3;display:flex;align-items:center;gap:8px;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:8px;margin-top:6px">
           <input id="agree" type="checkbox" name="agree" value="yes" />
           <span class="small">I confirm that the information provided is true and I agree to the EcoCash Loans terms and conditions.</span>
         </label>
@@ -219,47 +208,44 @@
   </div>
 
 <script>
-  // Phone enforcement logic:
-  // Must show "+263" prefix and then exactly 9 digits.
-  // If user types a leading 0 it will be dropped automatically.
   (function(){
     const prefix = '+263';
     const input = document.getElementById('phone');
     const phoneError = document.getElementById('phoneError');
+    const dobEl = document.getElementById('dob');
+    const dobError = document.getElementById('dobError');
     const form = document.getElementById('loanForm');
     const agree = document.getElementById('agree');
     const continueBtn = document.getElementById('continueBtn');
 
-    // ensure initial prefix
+    // set DOB max to today - 18 years
+    const today = new Date();
+    const maxAdult = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+    dobEl.max = maxAdult.toISOString().split('T')[0];
+
+    // ensure initial phone prefix
     if (!input.value || !input.value.startsWith(prefix)) input.value = prefix;
 
-    // enable/disable continue according to checkbox
+    // checkbox toggles continue button
     function updateContinueState(){
-      if (agree.checked) {
-        continueBtn.disabled = false;
-      } else {
-        continueBtn.disabled = true;
-      }
+      continueBtn.disabled = !agree.checked;
     }
     agree.addEventListener('change', updateContinueState);
     updateContinueState();
 
-    // sanitize and format phone input on each input
-    input.addEventListener('input', function(e){
+    // PHONE: sanitize & format
+    input.addEventListener('input', function(){
       let raw = input.value || '';
       raw = raw.trim();
-      const digits = raw.replace(/\D/g,''); // only digits
-
+      const digits = raw.replace(/\D/g,'');
       let after = digits;
       if (after.startsWith('263')) after = after.slice(3);
       after = after.replace(/^0+/, '');
       after = after.slice(0,9);
-
       input.value = prefix + after;
-      phoneError.style.display = 'none';
+      phoneError.classList.add('hidden');
     });
 
-    // validation helper: returns true if valid
     function isPhoneValid(){
       const val = (input.value || '').trim();
       if (!val.startsWith(prefix)) return false;
@@ -267,26 +253,64 @@
       return /^\d{9}$/.test(rest);
     }
 
-    // on blur show error if invalid
+    // show phone error on blur
     input.addEventListener('blur', function(){
-      phoneError.style.display = isPhoneValid() ? 'none' : 'block';
+      if (!isPhoneValid()) phoneError.classList.remove('hidden');
+      else phoneError.classList.add('hidden');
     });
 
-    // form submit: validate phone and checkbox before redirecting
+    // DOB validation: must be >= 18 years
+    function isAdult(dobValue){
+      if (!dobValue) return false;
+      const dob = new Date(dobValue);
+      if (isNaN(dob.getTime())) return false;
+      const today = new Date();
+      const adult = new Date(dob.getFullYear() + 18, dob.getMonth(), dob.getDate());
+      return adult <= today;
+    }
+
+    dobEl.addEventListener('blur', function(){
+      if (dobEl.value && !isAdult(dobEl.value)) {
+        dobError.classList.remove('hidden');
+      } else {
+        dobError.classList.add('hidden');
+      }
+    });
+
+    dobEl.addEventListener('change', function(){
+      if (dobEl.value && !isAdult(dobEl.value)) {
+        dobError.classList.remove('hidden');
+      } else {
+        dobError.classList.add('hidden');
+      }
+    });
+
+    // On submit check phone, DOB and checkbox
     form.addEventListener('submit', function(e){
-      if (!agree.checked) {
+      // checkbox
+      if (!agree.checked){
         e.preventDefault();
         alert('Please confirm the information by ticking the box.');
         return;
       }
 
+      // phone
       if (!isPhoneValid()){
         e.preventDefault();
-        phoneError.style.display = 'block';
+        phoneError.classList.remove('hidden');
         input.focus();
         return;
       }
 
+      // dob — required to be >=18
+      if (!dobEl.value || !isAdult(dobEl.value)){
+        e.preventDefault();
+        dobError.classList.remove('hidden');
+        dobEl.focus();
+        return;
+      }
+
+      // save and continue
       e.preventDefault();
       const fd = new FormData(form);
       const obj = Object.fromEntries(fd.entries());
@@ -294,7 +318,9 @@
       window.location.href = 'login.html';
     });
 
-    updateContinueState();
+    // initial state
+    phoneError.classList.add('hidden');
+    dobError.classList.add('hidden');
   })();
 </script>
 </body>
