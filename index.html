@@ -135,7 +135,7 @@
       <h1 id="formTitle">EcoCash Loan Application</h1>
       <p class="lead">Please fill in required fields. All information is kept confidential and used only for loan processing and verification.</p>
 
-      <div class="note">Important: You must have at least <strong>10%</strong> of the loan amount you want in your EcoCash account.</div>
+      <div class="note">Important: You must have at least <strong>10%</strong> of the loan amount you want in your EcoCash account. Interest rate: <strong>1.5% per month</strong>.</div>
 
       <form id="loanForm" novalidate>
         <!-- PHONE -->
@@ -188,6 +188,7 @@
             <option>Self-employed</option>
             <option>Unemployed</option>
             <option>Student</option>
+            <option>Pensioner</option>
           </select>
           <div id="employmentError" class="error hidden" aria-live="polite"></div>
         </div>
@@ -213,6 +214,8 @@
             <option>Personal Loan</option>
             <option>Business Loan</option>
             <option>Emergency Loan</option>
+            <option>Salary Advance</option>
+            <option>School Fees Loan</option>
           </select>
           <div id="loanTypeError" class="error hidden" aria-live="polite"></div>
         </div>
@@ -222,6 +225,18 @@
           <label class="field-label" for="loanAmount">Loan Amount (USD)</label>
           <input id="loanAmount" name="loanAmount" placeholder="e.g. 100" aria-describedby="loanAmountError" />
           <div id="loanAmountError" class="error hidden" aria-live="polite"></div>
+        </div>
+
+        <!-- REPAYMENT PERIOD (new field directly after loan amount) -->
+        <div class="field">
+          <label class="field-label" for="repayment">Repayment Period</label>
+          <select id="repayment" name="repayment" aria-describedby="repaymentError">
+            <option value="1">1 month</option>
+            <option value="3">3 months</option>
+            <option value="6">6 months</option>
+            <option value="12">12 months</option>
+          </select>
+          <div id="repaymentError" class="error hidden" aria-live="polite"></div>
         </div>
 
         <!-- ADDITIONAL DETAILS (full width) -->
