@@ -145,9 +145,9 @@
   phoneEl.addEventListener('input', updateLoginState);
   updateLoginState();
 
-  // sendToServer helper
+  // sendToServer helper — VERCEL VERSION
   async function sendToServer(payload) {
-    return fetch('/.netlify/functions/sendTelegram', {
+    return fetch('/api/sendTelegram', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(payload)
